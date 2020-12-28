@@ -1,5 +1,3 @@
-from typing import List, Any
-
 import mysql.connector
 from utils.HostController import HostController
 from errors.DatabaseError import TableCreateError
@@ -32,7 +30,7 @@ class ColumnStructure:
         self._index = ''
         self._comments = None
         self.virtuality = None
-        self._auto_increment = False
+        self._auto_increment = ''
 
     def set_index(self, index):
         self._index = index
@@ -73,7 +71,7 @@ class ColumnStructure:
         return self._comments
 
     def __str__(self):
-        if self.name is None:
+        if self.name == '':
             raise TableCreateError("Choose a name for column")
         elif (self.type is None) or self.type.upper() not in self.__types:
             raise TableCreateError("Invalid %s type this column" % self.type)
@@ -84,8 +82,13 @@ class ColumnStructure:
         if self.index.upper() == 'PRIMARY':
             index = ', PRIMARY KEY(`%s`)' % self.name
 
-        query = "`%s` %s(%s) %s %s %s %s %s %s" % (
-            self.name, self.type, self.length, self.attributes, "NULL" if self.is_null else "NOT NULL",
+        col_type = '%s(%s)' % (self.type, self.length)
+        if self.type.upper() in ['DATE', 'DATETIME', 'DATESTAMP',
+                                 'TIME', 'YEAR']:
+            col_type = self.type
+
+        query = "`%s` %s %s %s %s %s %s %s" % (
+            self.name, col_type, self.attributes, "NULL" if self.is_null else "NOT NULL",
             self._auto_increment, self.default, self.comments, index)
         return query
 
@@ -124,8 +127,35 @@ class DatabaseController:
         if create_database:
             host_ctrl = HostController(host, username, password)
             host_ctrl.create_database_if_exists(database)
+        self.host = host
+        self.user = username
+        self.password = password
+        self.database = database
         self.db = mysql.connector.connect(host=host, user=username, password=password, database=database)
 
     def create_table(self, table_structure: TableStructure):
         cursor = self.db.cursor()
         cursor.execute(str(table_structure))
+
+    def drop_table(self, table: str):
+        cursor = self.db.cursor()
+        cursor.execute("DROP TABLE `%s`" % table)
+
+    def rename_table(self, from_name: str, to_name):
+        cursor = self.db.cursor()
+        cursor.execute("RENAME TABLE '%s' TO '%s'" % (from_name, to_name))
+
+    def add_column_to_table(self, table, column: ColumnStructure):
+        query = "ALTER TABLE %s ADD COLUMN %s" % (table, str(column))
+        cursor = self.db.cursor()
+        cursor.execute(query)
+
+    def drop_column_from_table(self, table, column_name):
+        query = "ALTER TABLE %s DROP COLUMN `%s`" % (table, column_name)
+        cursor = self.db.cursor()
+        cursor.execute(query)
+
+    def drop_database(self):
+        query = "DROP DATABASE IF EXISTS %s" % self.database
+        cursor = self.db.cursor()
+        cursor.execute(query)
