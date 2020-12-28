@@ -14,3 +14,8 @@ class DatabaseNotExistsError(DatabaseError):
 class DatabaseBadNameError(DatabaseError):
     def __init__(self):
         self.msg = "Bad database name"
+
+
+class TableCreateError(DatabaseError):
+    def __init__(self, msg):
+        self.msg = msg
