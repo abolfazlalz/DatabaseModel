@@ -1,4 +1,5 @@
 import mysql.connector
+from utils.queries.SelectQuery import SelectQuery
 
 
 class TableController:
@@ -10,6 +11,7 @@ class TableController:
         self.password = password
         self.table = table
         self.db = mysql.connector.connect(host=host, user=user, password=password, database=database)
+        self.select = SelectQuery(table, self.db)
 
     def insert(self, data_list: dict):
         data_list = self.__fix_datalist_values__(data_list)
@@ -17,8 +19,7 @@ class TableController:
         columns_values = ', '.join(data_list.values())
 
         query = "INSERT INTO %s (%s) VALUES (%s)" % (self.table, columns_keys, columns_values)
-        cursor = self.db.cursor()
-        cursor.execute(query)
+        cursor = self.execute_query(query)
         self.db.commit()
         return cursor.lastrowid
 
@@ -29,13 +30,17 @@ class TableController:
         condition_result = ', '.join('='.join((key, val)) for (key, val) in condition.items())
 
         query = "UPDATE %s SET %s WHERE %s" % (self.table, data_list_result, condition_result)
-        cursor = self.db.cursor()
-        cursor.execute(query)
+        self.execute_query(query)
         self.db.commit()
 
     def delete(self, condition: dict):
         condition = self.__fix_datalist_values__(condition)
         condition_result = ', '.join('='.join((key, val)) for (key, val) in condition.items())
+
+    def execute_query(self, query):
+        cursor = self.db.cursor()
+        cursor.execute(query)
+        return cursor
 
     @staticmethod
     def __give_str_value__(value: str) -> str:
