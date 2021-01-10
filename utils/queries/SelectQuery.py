@@ -42,8 +42,14 @@ class SelectQuery:
         cursor = self._db.cursor()
         cursor.execute(self.__get_query())
         result = []
-        for item in cursor.fetchall():
-            result.append(item)
+        field_names = [i[0] for i in cursor.description]
+        for columns in cursor.fetchall():
+            num = 0
+            data = {}
+            for column in columns:
+                data[field_names[num]] = column
+                num += 1
+            result.append(data)
         return result
 
     def __get_query(self):
